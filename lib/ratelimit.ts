@@ -10,3 +10,4 @@ export const reservationLimiter = new Ratelimit({
   limiter: Ratelimit.slidingWindow(5, "15 m"),
   prefix: "olive-table:reservations",
 });
+    
