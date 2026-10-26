@@ -3,8 +3,6 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export const runtime = "nodejs";
-
 const statusSchema = z.object({
   reservationId: z.uuid(),
   paymentToken: z.string().regex(/^[a-f0-9]{64}$/),
