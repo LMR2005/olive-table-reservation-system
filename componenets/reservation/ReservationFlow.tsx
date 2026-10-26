@@ -9,7 +9,19 @@ import ReservationSummary from "./ReservationSummary";
 import TableSelection from "./TableSelection";
 import { toast } from "sonner";
 import { RestaurantTable, TableCombination } from "@/types/reservation";
+import PayHereCheckout from "@/app/reservation/PayHereCheckout";
 
+
+type PendingReservation = {
+    reservationId: string;
+    paymentToken: string;
+    depositAmount: number;
+    bookingReference: string;
+    guests: number;
+    date: string;
+    time: string;
+    tableNames: string[];
+};
 
 function isValidCapacityCombination(
     guests: number,
@@ -64,6 +76,9 @@ export default function ReservationFlow({
     const [verifiedSlot, setVerifiedSlot] = useState<string | null>(null);
 
     const currentSlot = date && time ? `${date}|${time}` : null;
+
+    const [pendingReservation, setPendingReservation] =
+        useState<PendingReservation | null>(null);
 
     const availabilityVerified =
         currentSlot !== null && verifiedSlot === currentSlot;
@@ -229,10 +244,34 @@ export default function ReservationFlow({
                 return;
             }
 
-            toast.success("Reservation held successfully!", {
-                description: `Booking reference: ${result.booking_reference}. Payment is required to confirm.`,
+            if (
+                typeof result.reservation_id !== "string" ||
+                typeof result.payment_token !== "string" ||
+                typeof result.deposit_amount_lkr !== "number" ||
+                typeof result.booking_reference !== "string"
+            ) {
+                throw new Error("Reservation response is incomplete.");
+            }
+
+
+            setPendingReservation({
+                reservationId: result.reservation_id,
+                paymentToken: result.payment_token,
+                depositAmount: result.deposit_amount_lkr,
+                bookingReference: result.booking_reference,
+
+                guests,
+                date,
+                time,
+                tableNames: selectedTables.map(
+                    (table) => `T${String(table.id).padStart(2, "0")}`
+                ),
             });
 
+
+            toast.success("Reservation held successfully! Please Complete your deposit payment.", {
+                description: `Booking reference: ${result.booking_reference}. Payment is required to confirm.`,
+            });
             resetReservationForm();
 
         } catch (error) {
@@ -249,93 +288,115 @@ export default function ReservationFlow({
     }
 
     return (
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-12">
-
-            {/* LEFT SIDE */}
-            <div className="space-y-7">
-
-                <VisitDetails
-                    date={date}
-                    setDate={setDate}
-                    guests={guests}
-                    setGuests={setGuests}
-                    time={time}
-                    setTime={setTime}
-                    setPreview={setPreview}
-                    isSubmitting={isSubmitting}
+        <div>
+            {pendingReservation ? (
+                <PayHereCheckout
+                    reservationId={pendingReservation.reservationId}
+                    paymentToken={pendingReservation.paymentToken}
+                    depositAmount={pendingReservation.depositAmount}
+                    bookingReference={pendingReservation.bookingReference}
+                    guests={pendingReservation.guests}
+                    date={pendingReservation.date}
+                    time={pendingReservation.time}
+                    tableNames={pendingReservation.tableNames}
                 />
+            ) : (
+                <>
+                    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-12">
+                        {/* LEFT SIDE */}
+                        <div className="space-y-7">
 
-                {date && time && (
-                    <TableSelection
-                        guests={guests}
-                        date={date}
-                        time={time}
-                        selectedTables={selectedTables}
-                        setSelectedTables={setSelectedTables}
-                        isJoined={isJoined}
-                        setIsJoined={setIsJoined}
-                        tableData={tableData}
-                        tableCombinations={tableCombinations}
-                        onAvailabilityChange={setVerifiedSlot}
-                        depositPerTable={depositPerTable}
-                        availabilityRefreshKey={availabilityRefreshKey}
-                    />
-                )}
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#A17B49]">01 / Your visit</p>
+                                <h2 className="mt-3 font-serif text-3xl sm:text-4xl">Find your perfect table</h2>
+                                <p className="mt-3 text-sm leading-7 text-[#65746B]">Select your preferred date, time, and party size. We’ll take care of the rest.</p>
+                            </div>
 
-                <div className="pt-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#A17B49]">
-                        02 / Guest details
-                    </p>
+                            <VisitDetails
+                                date={date}
+                                setDate={setDate}
+                                guests={guests}
+                                setGuests={setGuests}
+                                time={time}
+                                setTime={setTime}
+                                setPreview={setPreview}
+                                isSubmitting={isSubmitting}
+                            />
 
-                    <h2 className="mt-3 font-serif text-3xl sm:text-4xl">
-                        A few more details
-                    </h2>
-                </div>
+                            {date && time && (
+                                <TableSelection
+                                    guests={guests}
+                                    date={date}
+                                    time={time}
+                                    selectedTables={selectedTables}
+                                    setSelectedTables={setSelectedTables}
+                                    isJoined={isJoined}
+                                    setIsJoined={setIsJoined}
+                                    tableData={tableData}
+                                    tableCombinations={tableCombinations}
+                                    onAvailabilityChange={setVerifiedSlot}
+                                    depositPerTable={depositPerTable}
+                                    availabilityRefreshKey={availabilityRefreshKey}
+                                />
+                            )}
 
-                <GuestDetails
-                    name={name}
-                    setName={setName}
-                    email={email}
-                    setEmail={setEmail}
-                    phone={phone}
-                    setPhone={setPhone}
-                    notes={notes}
-                    setNotes={setNotes}
-                    accepted={accepted}
-                    setAccepted={setAccepted}
-                    ready={ready}
-                    onSubmit={() => handleReservationSubmit()}
-                    isSubmitting={isSubmitting}
-                />
+                            <div className="pt-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#A17B49]">
+                                    02 / Guest details
+                                </p>
 
-            </div>
+                                <h2 className="mt-3 font-serif text-3xl sm:text-4xl">
+                                    A few more details
+                                </h2>
+                            </div>
 
-            {/* RIGHT SIDE */}
-            <aside className="lg:sticky lg:top-7">
+                            <GuestDetails
+                                name={name}
+                                setName={setName}
+                                email={email}
+                                setEmail={setEmail}
+                                phone={phone}
+                                setPhone={setPhone}
+                                notes={notes}
+                                setNotes={setNotes}
+                                accepted={accepted}
+                                setAccepted={setAccepted}
+                                ready={ready}
+                                onSubmit={() => handleReservationSubmit()}
+                                isSubmitting={isSubmitting}
+                            />
 
-                <ReservationSummary
-                    date={date}
-                    time={time}
-                    guests={guests}
-                    tableCount={tableCount}
-                    deposit={deposit}
-                    depositPerTable={depositPerTable}
-                />
+                        </div>
 
-                <div className="mt-5 border border-[#E2DED3] bg-[#EFECE3] p-6">
-                    <p className="text-[11px] font-bold uppercase tracking-[.15em]">
-                        Good to know
-                    </p>
+                        {/* RIGHT SIDE */}
+                        <aside className="lg:sticky lg:top-7">
 
-                    <p className="mt-3 text-sm leading-7 text-[#58675D]">
-                        If you’re running late, please contact the restaurant.
-                        A 15-minute grace period was proposed; final
-                        cancellation and refund terms must be approved
-                        before launch.
-                    </p>
-                </div>
+                            <ReservationSummary
+                                date={date}
+                                time={time}
+                                guests={guests}
+                                tableCount={tableCount}
+                                deposit={deposit}
+                                depositPerTable={depositPerTable}
+                            />
 
-            </aside>
+                            <div className="mt-5 border border-[#E2DED3] bg-[#EFECE3] p-6">
+                                <p className="text-[11px] font-bold uppercase tracking-[.15em]">
+                                    Good to know
+                                </p>
+
+                                <p className="mt-3 text-sm leading-7 text-[#58675D]">
+                                    If you’re running late, please contact the restaurant.
+                                    A 15-minute grace period was proposed; final
+                                    cancellation and refund terms must be approved
+                                    before launch.
+                                </p>
+                            </div>
+
+                        </aside>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

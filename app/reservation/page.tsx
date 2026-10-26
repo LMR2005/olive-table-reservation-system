@@ -44,15 +44,6 @@ export default function Reservation() {
                 </section>
 
                 <section className="mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-20">
-                    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-12">
-                        <div className="space-y-7">
-                            <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#A17B49]">01 / Your visit</p>
-                                <h2 className="mt-3 font-serif text-3xl sm:text-4xl">Find your perfect table</h2>
-                                <p className="mt-3 text-sm leading-7 text-[#65746B]">Select your preferred date, time, and party size. We’ll take care of the rest.</p>
-                            </div>
-                        </div>
-                    </div>
 
                     <Suspense fallback={<ReservationLoading />}>
                         <ReservationData />
