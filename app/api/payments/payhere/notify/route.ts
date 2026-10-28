@@ -6,6 +6,13 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
 
+
+    console.info("[PayHere Notify] Request received", {
+      timestamp: new Date().toISOString(),
+      contentType: request.headers.get("content-type"),
+      fieldNames: [...formData.keys()],
+    });
+
     const getField = (name: string): string | null => {
       const value = formData.get(name);
       return typeof value === "string" ? value : null;
@@ -53,11 +60,11 @@ export async function POST(request: Request) {
     const expectedSignature = createHash("md5")
       .update(
         merchantId +
-          orderId +
-          amount +
-          currency +
-          statusCode +
-          hashedSecret
+        orderId +
+        amount +
+        currency +
+        statusCode +
+        hashedSecret
       )
       .digest("hex")
       .toUpperCase();
@@ -76,6 +83,8 @@ export async function POST(request: Request) {
         status: 403,
       });
     }
+
+    console.info("[PayHere Notify] Signature verified");
 
     const { data: payment, error: lookupError } =
       await supabaseAdmin
@@ -113,6 +122,9 @@ export async function POST(request: Request) {
         p_payment_method: paymentMethod?.slice(0, 50) ?? null,
       }
     );
+    console.info("[PayHere Notify] Database result:", {
+      result: data?.result,
+    });
 
     if (error) {
       console.error("PayHere processing failed:", error);
