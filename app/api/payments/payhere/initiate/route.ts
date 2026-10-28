@@ -307,8 +307,18 @@ export async function POST(request: Request) {
 
         const siteUrl = new URL(baseUrl);
 
+
+        const isLocalSandbox =
+            process.env.PAYHERE_MODE === "sandbox" &&
+            siteUrl.protocol === "http:" &&
+            siteUrl.hostname === "localhost" &&
+            siteUrl.port === "3000";
+
+        const isSecureWebsite =
+            siteUrl.protocol === "https:";
+
         if (
-            siteUrl.protocol !== "https:" ||
+            (!isLocalSandbox && !isSecureWebsite) ||
             siteUrl.username ||
             siteUrl.password ||
             siteUrl.search ||
@@ -316,6 +326,7 @@ export async function POST(request: Request) {
         ) {
             throw new Error("Invalid payment site URL configuration.");
         }
+
 
         const returnUrl = new URL(
             "/reservation/payment-result",
@@ -327,10 +338,31 @@ export async function POST(request: Request) {
             siteUrl
         ).toString();
 
+
+        const notificationBaseUrl =
+            process.env.PAYHERE_NOTIFICATION_BASE_URL ??
+            baseUrl;
+
+        if (!notificationBaseUrl) {
+            throw new Error("Notification URL is not configured.");
+        }
+        const notificationSiteUrl = new URL(notificationBaseUrl);
+
+        if (
+            notificationSiteUrl.protocol !== "https:" ||
+            notificationSiteUrl.username ||
+            notificationSiteUrl.password ||
+            notificationSiteUrl.search ||
+            notificationSiteUrl.hash
+        ) {
+            throw new Error("Invalid PayHere notification URL.");
+        }
+
         const notifyUrl = new URL(
             "/api/payments/payhere/notify",
-            siteUrl
+            notificationSiteUrl
         ).toString();
+
 
         const nameParts = customer.full_name.trim().split(/\s+/);
 

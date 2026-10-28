@@ -190,6 +190,8 @@ export default function PayHereCheckout({
       );
 
       const data = await response.json();
+      console.log("PayHere notify URL:", data.fields?.notify_url);
+      console.log("PayHere order ID:", data.fields?.order_id);
 
       if (!response.ok || !data.success) {
         throw new Error(
